@@ -51,14 +51,14 @@ Below is a detailed usage of BOTA.py:
 
   Options:
 
-  --version             show program's version number and exit
+    --version             show program's version number and exit
 
-  -h, --help            show this help message and exit
+    -h, --help            show this help message and exit
 
-  Required options:
+  
+Required options:
 
-    These options are required to run BOTA, and may be supplied in any
-    order.
+  These options are required to run BOTA, and may be supplied in any order.
 
     -i FILE, --infile=FILE
                         Input microbial genome file(s) in fasta format (if
@@ -67,9 +67,10 @@ Below is a detailed usage of BOTA.py:
                         The output directory of BOTA. If it doesn't exist,
                         BOTA will create it.
 
-  Optional parameters:
+  
+Optional parameters:
 
-    These options are optional, and may be supplied in any order.
+These options are optional, and may be supplied in any order.
 
     -t INT, --num_proc=INT
                         Number of processor for BOTA to use [default: 1; set 0
