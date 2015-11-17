@@ -50,10 +50,13 @@ The basic BOTA analysis runs as below:
 Below is a detailed usage of BOTA.py:
 
   Options:
+
   --version             show program's version number and exit
+
   -h, --help            show this help message and exit
 
   Required options:
+
     These options are required to run BOTA, and may be supplied in any
     order.
 
@@ -65,6 +68,7 @@ Below is a detailed usage of BOTA.py:
                         BOTA will create it.
 
   Optional parameters:
+
     These options are optional, and may be supplied in any order.
 
     -t INT, --num_proc=INT
