@@ -87,7 +87,7 @@ These options are optional, and may be supplied in any order.
                         (http://www.psort.org/).
     -n STRING, --netMHCIIpan=STRING
                         The directory to netMHCIIpan binary, specify if not in
-                        ENV (http://www.cbs.dtu.dk/services/NetMHCIIpan-3.1/).
+                        ENV (http://www.cbs.dtu.dk/services/NetMHCII).
                         
 Interpret output
 ===========

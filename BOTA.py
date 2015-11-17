@@ -208,8 +208,8 @@ def main(argv = sys.argv[1:]):
 	optOptions.add_option("-p", "--psort", type = "string", metavar = "DIR", default = 'psort',
 		help = "The directory to PSort, specify if not in ENV (http://www.psort.org/).")
 	
-	optOptions.add_option("-n", "--netMHCIIpan", type = "string", metavar = "STRING", default = 'netMHCIIpan',
-		help = "The directory to netMHCIIpan binary, specify if not in ENV (http://www.cbs.dtu.dk/services/NetMHCIIpan-3.1/).")
+	optOptions.add_option("-n", "--netMHCII", type = "string", metavar = "STRING", default = 'netMHCII',
+		help = "The directory to netMHCII binary, specify if not in ENV http://www.cbs.dtu.dk/services/NetMHCII).")
 	
 							
 	parser.add_option_group(optOptions)
