@@ -83,7 +83,7 @@ These options are optional, and may be supplied in any order.
     --allele=STRING     Specify the allele you are interested in; if multiple,
                         separate them using coma.
                         For a full list of allele, type "python BOTA.py
-                        --list_allele.
+                        --list_allele".
     --list_allele       Print full list of allele and leave.
     
     --min_pep_length=INT
