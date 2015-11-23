@@ -136,7 +136,7 @@ script will print out all possible alleles to select from as below:
     H-2-IAb
     H-2-IAd
     
-For instance, if you have a genome that is the EGD-e strain of Listeria monocytogenes in fastA format: \"L.monocytogenes\_EGD-e.fa\", and you want to find out the epitodes that could be presented by mouse \"H-2-IAb\", you could run:
+For instance, if you have a genome that is the EGD-e strain of Listeria monocytogenes in fastA format: "L.monocytogenes_EGD-e.fa", and you want to find out the epitodes that could be presented by mouse "H-2-IAb", you could run:
 
     python pipeline/BOTA.py -i test/L.monocytogenes_EGD-e.fa -o test/Listeria.BOTA/ -t 2 --allele H-2-IAb
     
@@ -144,15 +144,27 @@ Alternatively, if you are interested in all alleles from mouse MHC-II then you c
 
     python pipeline/BOTA.py -i test/L.monocytogenes_EGD-e.fa -o test/Listeria.BOTA/ -t 2 --loci mouse
 
-The output of the eiptopes predicted would be in the file: test/Listeria.BOTA/L.monocytogenes\_EGD-e.epitopes.out
+The output of the eiptopes predicted would be in the file: test/Listeria.BOTA/L.monocytogenes_EGD-e.epitopes.out
 
 Interpret output
 ===========
 
-In the project/output directory you will find a folder called "results", in which you can find the below files and directories:
+The output from the previous example looks like this:
+
+    #epitope	core	gene	allele	start	end	affinity	cell_location
+    AGAYSGAHLNPAVTI	YSGAHLNPA	ENA|AL591824|AL591824.1_1170|1194120-1194824|1	H-2-IAb	55	70	70.1000	CytoplasmicMembrane
+    KVTFAGTVVQPIVEA	FAGTVVQPI	ENA|AL591824|AL591824.1_258|282755-284227|1	H-2-IAb	265	280	84.1000	Cellwall
+    DVHYTWSIPNSTNVK	YTWSIPNST	ENA|AL591824|AL591824.1_156|157089-159470|1	H-2-IAb	65	80	22.3250	Cellwall
+    DRVFTAGAPISSTNF	FTAGAPISS	ENA|AL591824|AL591824.1_156|157089-159470|1	H-2-IAb	243	258	49.1500	Cellwall
+    TYFFTSPYARAVAVA	FTSPYARAV	ENA|AL591824|AL591824.1_2810|2879906-2880205|-1	H-2-IAb	40	55	21.1500	CytoplasmicMembrane
+    MKPYNPTTALVVAED	YNPTTALVV	ENA|AL591824|AL591824.1_1671|1717193-1722328|-1	H-2-IAb	751	766	114.9250	Cellwall
+    ......
+    
 
 Tutorial
 =====================
 
 Below is an example to walk you through what a real BOTA analysis should look like.
+
+[TBD]
 
