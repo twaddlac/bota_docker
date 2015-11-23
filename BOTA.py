@@ -56,6 +56,7 @@ from operator import itemgetter
 from time import ctime, time
 import multiprocessing as mp
 from subprocess import call, PIPE, Popen
+from itertools import groupby
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -173,7 +174,84 @@ def run_psort(args):
 	xfh.close()
 		
 	return 0
+
+def run_hmmtop(args):
+	hmmtop, infile, outfile = args
+	cmd = [hmmtop, '-if=%s' % infile, '-of=%s' % outfile, '-pl']
+	call(cmd, stdout = PIPE, stderr = PIPE)
+	return 0
 	
+def convert_hmmtop_output(infile):
+	models = {}
+	for line in open(infile, 'rb'):
+		if line[0] == '>':
+			gene, orientation, n_st = line[:-1].split()[2:5]
+			models[gene] = {'seq': '', 'pred': ''}
+			continue
+		cols = [x for x in line[:-1].split() if x != '']
+		if 'seq' not in cols and 'pred' not in cols: continue
+		elif 'seq' in cols:
+			for s in cols[1:-1]: models[gene]['seq']+=s
+		elif 'pred' in cols:
+			for s in cols[1:-1]: models[gene]['pred']+=s
+	return models
+
+def extract_structs(seq, pred):
+	X = [[k,len(list(g))] for k, g in groupby(pred)]
+	start_ind = 0
+	end_ind = 0
+	structs = {}
+	for symbol, L in X:
+		if symbol not in structs: structs[symbol] = []
+		end_ind += L
+		seq_seg = seq[start_ind: end_ind]
+		structs[symbol].append([seq_seg, start_ind+1, end_ind])
+		start_ind+=L
+	return structs
+
+def run_netMHCII(args):
+	netMHCII, min_pep_length, allele, infile, outfile = args
+	with open(outfile, 'wb') as ofh:
+		call([netMHCII, '-l', str(min_pep_length), '-a', allele, infile], stdout = ofh, stderr = sys.stderr)
+	return 0
+	
+def parse_netMHCII_output(infile, allele, tag_dict, seq_dict):
+	binders = {}
+	for line in open(infile, 'rb'):
+		cols = [x for x in line[:-1].split() if x!= '']
+		if len(cols) < 5 or cols[0] != allele: continue
+		if cols[-3] != 'SB' and cols[-3] != 'WB': continue
+		id = int(cols[-1])
+		if id not in binders: binders[id] = []
+		binders[id].append(cols)
+	strong_binders = {}
+	for id in binders:
+		if 'SB' not in set(map(itemgetter(-3), binders[id])): continue
+		strong_binders[id] = binders[id]
+	
+	all_epitopes = {}
+	for id in strong_binders:
+		epitopes = {}   # group epitopes with the same core together, ext them
+		gene, gene_loc, loc_score, start, end = tag_dict[id]
+		seq = seq_dict[id]
+		for pep in strong_binders[id]:
+			hla, pos, peptide, core, affinity = pep[0], int(pep[1]), pep[2], pep[3], float(pep[5])
+			type = pep[-3]
+			if core not in epitopes: epitopes[core] = []
+			epitopes[core].append([hla, pos, peptide, type, affinity])
+		X = []
+		for core in epitopes:
+			if 'SB' not in map(itemgetter(-2), epitopes[core]): continue
+			L = len(epitopes[core][0][2])
+			hla = map(itemgetter(0), epitopes[core])[0]
+			avg_score = sum(map(itemgetter(-1), epitopes[core]))/len(epitopes[core])
+			start_ind, end_ind = epitopes[core][0][1], epitopes[core][-1][1]
+			X.append([seq[start_ind:end_ind+L], hla, core, avg_score, start+start_ind, start+end_ind+L])
+		all_epitopes[id] = X
+	
+	return all_epitopes
+
+		
 def main(argv = sys.argv[1:]):
 	parser = OptionParser(usage = USAGE, version="Version: " + __version__)
 	
@@ -193,11 +271,24 @@ def main(argv = sys.argv[1:]):
 	optOptions = OptionGroup(parser, "Optional parameters",
 		"These options are optional, and may be supplied in any order.")
 
-	optOptions.add_option("-t", "--num_proc", type = "int", default = 1, metavar = 'INT',
+	optOptions.add_option("-t", "--num_proc", type = "int", default = 1, metavar = "INT",
 		help = "Number of processor for BOTA to use [default: 1; set 0 if you want to use all CPUs available].")
 	
 	optOptions.add_option("-m", "--mode", type = "string", default = 'single', metavar = 'STRING',
 		help = "Mode of running BOTA, either \"single\" or \"meta\" (default: single).")
+	
+	optOptions.add_option("--loci", type = "string", default = 'human', metavar = 'STRING',
+		help = "Loci selection, either \"human\" or \"mouse\" (default: human).")
+	
+	optOptions.add_option("--allele", type = "string", metavar = 'STRING',
+		help = "Specify the allele you are interested in; if multiple, separate them using coma.\
+				For a full list of allele, type \"python BOTA.py --list_allele.")
+	
+	optOptions.add_option("--list_allele", metavar = 'BOOL', action="store_true",
+		default=False,  help="Print full list of allele and leave.")
+	
+	optOptions.add_option("--min_pep_length", type = "int", default = 12, metavar = "INT",
+		help = "The minimum length of epitode to consider (default: 12).")
 	
 	optOptions.add_option("--prodigal", type = "string", metavar = "DIR", default = 'prodigal',
 		help = "The directory to prodigal binary, specify if not in ENV (http://prodigal.ornl.gov/).")
@@ -205,16 +296,42 @@ def main(argv = sys.argv[1:]):
 	optOptions.add_option("--blat", type = "string", metavar = "DIR", default = 'blat',
 		help = "The directory to blat binary, specify if not in ENV (https://genome.ucsc.edu/FAQ/FAQblat.html).")
 	
-	optOptions.add_option("-p", "--psort", type = "string", metavar = "DIR", default = 'psort',
+	optOptions.add_option("--psort", type = "string", metavar = "DIR", default = 'psort',
 		help = "The directory to PSort, specify if not in ENV (http://www.psort.org/).")
 	
-	optOptions.add_option("-n", "--netMHCII", type = "string", metavar = "STRING", default = 'netMHCII',
+	optOptions.add_option("--hmmtop", type = "string", metavar = "DIR", default = 'hmmtop',
+		help = "The directory to HMMTOP, specify if not in ENV (http://www.enzim.hu/hmmtop/).")
+	
+	optOptions.add_option("--netMHCII", type = "string", metavar = "STRING", default = 'netMHCII',
 		help = "The directory to netMHCII binary, specify if not in ENV http://www.cbs.dtu.dk/services/NetMHCII).")
 	
 							
 	parser.add_option_group(optOptions)
 	
 	(options, args) = parser.parse_args(argv)
+	
+	# load allele first
+	all_alleles = []
+	pipeline_dir = os.path.dirname(os.path.realpath(__file__))
+	db_dir = os.path.join(pipeline_dir, 'db/')
+	HLA_db_file = os.path.join(db_dir, 'HLA.db')
+	if not os.path.exists(HLA_db_file):
+		sys.stderr.write('[FATAL]: Error in locating the HLA.db file. Abort!\n')
+		exit(1)
+	for line in open(HLA_db_file, 'rb'):
+		for c in line[:-1].split(','): all_alleles.append(c)
+	if options.list_allele:
+		sys.stdout.write('Below list all the legal allele names:\n')
+		for allele in all_alleles: sys.stdout.write('    %s\n' % allele)
+		sys.stdout.write('\n')
+		exit()
+	# load the HLA db
+	HLAs = {'human':[], 'mouse':[]}
+	for line in open(HLA_db_file, 'rb'):
+		cols = line[:-1].split(',')
+		if line[:3] == 'HLA': HLAs['human'] += cols
+		else: HLAs['mouse'] += cols
+	
 	
 	if options.infile == None:
 		parser.error('[FATAL]: No input fasta files specified.\n')
@@ -256,6 +373,30 @@ def main(argv = sys.argv[1:]):
 		nproc = mp.cpu_count()
 	else: nproc = options.num_proc
 	
+	if options.min_pep_length < 5 or options.min_pep_length > 20:
+		sys.stderr.write('[WARNING]: Cannot set minimum pep length outside of [5, 20] range, set to 12 to continue.\n')
+		options.min_pep_length = 12
+	
+	alleles = []
+	if options.allele == None:
+		if options.loci not in ['human', 'mouse']:
+			sys.stderr.write('[WARNING]: --loci option has to be either \"human\" or \"mouse\". You supplied: %s \
+									Now set it to \"human\" by default and continue.\n' % options.loci)
+			options.loci = 'human'
+		for a in HLAs[options.loci]: alleles.append(a)
+	else:
+		try:
+			for allele in options.allele.split(','):
+				if allele not in all_alleles:
+					sys.stderr.write('[FATAL]: Error in parsing the alleles you supplied: %s.\n' % (options.allele))
+					sys.stderr.write('    Alleles have to be one of the following, and separate them using coma if multiple:\n')
+					for a in all_alleles: sys.stderr.write('      %s\n' % a)
+					exit(1)
+				alleles.append(allele)
+		except:
+			sys.stderr.write('[FATAL]: Error in parsing the alleles you supplied: %s.\n' % (options.allele))
+			exit(1)	
+	
 	# test 3rd party exe
 	if not which(options.prodigal):
 		sys.stderr.write('[FATAL]: Cannot locate Prodigal in ENV nor in the directory you supplied: %s.\n' % options.prodigal)
@@ -272,10 +413,20 @@ def main(argv = sys.argv[1:]):
 		exit(1)
 	else: options.psort = which(options.psort)
 	
+	if not which(options.hmmtop):
+		sys.stderr.write('[FATAL]: Cannot locate hmmtop in ENV nor in the directory you supplied: %s.\n' % options.hmmtop)
+		exit(1)
+	else: options.hmmtop = which(options.hmmtop)
+	
+	if not which(options.netMHCII):
+		sys.stderr.write('[FATAL]: Cannot locate netMHCII in ENV nor in the directory you supplied: %s.\n' % options.netMHCII)
+		exit(1)
+	else: options.netMHCII = which(options.netMHCII)
+	
 	# test db files
-	current_dir = os.path.dirname(os.path.realpath(__file__))
-	db_dir = os.path.join(current_dir, 'db/')
-	db_files = [os.path.join(db_dir, f) for f in ['Gram.faa',]]
+	pipeline_dir = os.path.dirname(os.path.realpath(__file__))
+	db_dir = os.path.join(pipeline_dir, 'db/')
+	db_files = [os.path.join(db_dir, f) for f in ['Gram.faa', 'hmmtop.psv', 'hmmtop.arch', 'HLA.db']]
 	for db_file in db_files:
 		if not os.path.exists(db_file):
 			sys.stderr.write('[FATAL]: Cannot locate DB file %s\n' % os.path.basename(db_file))
@@ -283,16 +434,18 @@ def main(argv = sys.argv[1:]):
 	
 	# predict protein coding genes first
 	sys.stdout.write('Now predicting peptides first in genomes...\n')
-	gene_prediction_dir = os.path.join(outdir, 'genes')
+	gene_prediction_dir = os.path.join(outdir, 'genes/')
 	if not os.path.exists(gene_prediction_dir): os.mkdir(gene_prediction_dir)
 	prodigal_cmds = []
 	for sample_name, infile in infiles:
+		faa_file = '%s/%s.faa' % (gene_prediction_dir, sample_name)
+		if os.path.exists(faa_file): continue
 		prodigal_cmds.append([options.prodigal, sample_name, infile, gene_prediction_dir, options.mode])
-	
-	pool = mp.Pool(nproc)
-	pool.map_async(run_prodigal, prodigal_cmds)
-	pool.close()
-	pool.join()
+	if len(prodigal_cmds) > 0:
+		pool = mp.Pool(nproc)
+		pool.map_async(run_prodigal, prodigal_cmds)
+		pool.close()
+		pool.join()
 	
 	sys.stdout.write('Peptide prediction done!\n\n')
 	
@@ -340,11 +493,131 @@ def main(argv = sys.argv[1:]):
 		pool.map_async(run_psort, psort_cmds)
 		pool.close()
 		pool.join()
+		
+	# load location
+	locations = {}
+	for sample_name, infile in infiles:
+		genome_file = infile
+		locations[sample_name] = {}
+		psort_output = psort_dir+'/'+sample_name+'.psort'
+		for i, line in enumerate(open(psort_output, 'rb')):
+			if i == 0: continue
+			cols = [x for x in line[:-1].split() if x != '']
+			try: locations[sample_name][cols[0]] = [cols[1], float(cols[2])]
+			except: continue
+			
 	sys.stdout.write('Done!\n\n')	
 	
+	# run HMMTOP
+	# copy arch and psv files to current dir
+	sys.stdout.write('Now predicting transmembrane structures using HMMTOP...\n')
+	current_dir = os.getcwd()
+	pipeline_dir = os.path.dirname(os.path.realpath(__file__))
+	db_dir = os.path.join(pipeline_dir, 'db/')
+	db_files = [os.path.join(db_dir, f) for f in ['hmmtop.psv', 'hmmtop.arch']]
+	new_db_dest = [os.path.join(current_dir, f) for f in ['hmmtop.psv', 'hmmtop.arch']]
+	for src_file, dest_file in zip(db_files, new_db_dest):
+		if not os.path.exists(dest_file): shutil.copyfile(src_file, dest_file)
+	
+	hmmtop_cmds = []
+	hmmtop_dir = os.path.join(outdir, 'hmmtop/')
+	if not os.path.exists(hmmtop_dir): os.mkdir(hmmtop_dir)
+	for sample_name, infile in infiles:
+		faa_file = gene_prediction_dir+'/'+sample_name + '.faa'
+		hmmtop_file = os.path.join(hmmtop_dir, sample_name + '.hmmtop.out')
+		if not os.path.exists(hmmtop_file):
+			hmmtop_cmds.append([options.hmmtop, faa_file, hmmtop_file])
+	
+	if len(hmmtop_cmds) > 0:
+		pool = mp.Pool(nproc)
+		pool.map_async(run_hmmtop, hmmtop_cmds)
+		pool.close()
+		pool.join()
+	# cleanup
+	for hmmfile in new_db_dest: os.unlink(hmmfile)
+	
+	# load results
+	hmmtop_models = {}
+	for sample_name, infile in infiles:
+		sample_locations = locations[sample_name]
+		hmmtop_file = os.path.join(hmmtop_dir, sample_name + '.hmmtop.out')
+		hmmtop_models[sample_name] = convert_hmmtop_output(hmmtop_file)
+	
+	sys.stdout.write('Done!\n\n')
+	
+	# select target peptides
+	# protease cleavage sites prediction
+	sys.stdout.write('Now predicting the protease cutting sites using PeptideCutter...\n')
+	
+	sys.stdout.write('Done!\n\n')
+	
+	sys.stdout.write('Now calculating peptide MHCII affinity...\n')
+	
+	candidate_peptides = {}
+	for sample_name in locations:
+		candidate_peptides[sample_name] = []
+		for gene in locations[sample_name]:
+			gene_loc, loc_score = locations[sample_name][gene][0], float(locations[sample_name][gene][1])
+			seq = hmmtop_models[sample_name][gene]['seq']
+			pred = hmmtop_models[sample_name][gene]['pred']
+			structures = extract_structs(seq, pred)
+			if gene_loc == 'Extracellular' or gene_loc == 'Cellwall':
+				for K in structures:
+					candidate_peptides[sample_name].append([gene, gene_loc, loc_score, structures[K]])
+			elif 'o' in structures:
+				candidate_peptides[sample_name].append([gene, gene_loc, loc_score, structures['o']])
+					
+	# model for MHCII affinity
+	netMHCII_dir = os.path.join(outdir, 'netMHCII/')
+	if not os.path.exists(netMHCII_dir): os.mkdir(netMHCII_dir)
+	tag_dict = {}
+	seq_dict = {}
+	netMHCII_cmds = []
+	for sample_name in candidate_peptides:
+		candidate_file = '%s/%s.pep_candidate.faa' % (netMHCII_dir, sample_name)
+		tag_dict[sample_name] = {}
+		seq_dict[sample_name] = {}
+		pep_ind = 0
+		xfh = open(candidate_file, 'wb')
+		for gene, gene_loc, loc_score, structs in candidate_peptides[sample_name]:
+			for seq, start, end in structs:
+				if len(seq) < options.min_pep_length: continue
+				pep_ind += 1
+				tag_dict[sample_name][pep_ind] = (gene, gene_loc, loc_score, start, end)
+				seq_dict[sample_name][pep_ind] = seq
+				xfh.write('>%i\n%s\n' % (pep_ind, seq))
+		xfh.close()
 		
-	#	candidate_list_file = outdir+'/'+sample_name + '.candidate_peptides.txt'
-	#	select_candidate_peptide([faa_file, infile, candidate_list_file])
-		#select_candidate_peptide_cmds.append([faa_file, infile, candidate_list_file])
-
+		for allele in alleles:
+			netMHCII_file = '%s/%s.netMHCII.%s.out' % (netMHCII_dir, sample_name, allele)
+			if not os.path.exists(netMHCII_file):
+				netMHCII_cmds.append([options.netMHCII, options.min_pep_length, allele, candidate_file, netMHCII_file])
+		
+	if len(netMHCII_cmds) > 0:
+		pool = mp.Pool(nproc)
+		pool.map_async(run_netMHCII, netMHCII_cmds)
+		pool.close()
+		pool.join()
+	
+	# parse the results
+	for sample_name in candidate_peptides:
+		outfile = os.path.join(outdir, '%s.epitopes.out' % sample_name)
+		ofh = open(outfile, 'wb')
+		ofh.write('#epitope\tcore\tgene\tallele\tstart\tend\taffinity\tcell_location\n')
+		for allele in alleles:
+			netMHCII_file = '%s/%s.netMHCII.%s.out' % (netMHCII_dir, sample_name, allele)
+			if not os.path.exists(netMHCII_file): continue
+			epitopes = parse_netMHCII_output(netMHCII_file, allele, tag_dict[sample_name], seq_dict[sample_name])
+			X = []
+			for id in epitopes:
+				gene, gene_loc, loc_score, start, end = tag_dict[sample_name][id]
+				for gene_epitope in epitopes[id]:
+					X.append(gene_epitope+[gene, gene_loc])
+			for epitope, a, core, affinity, start, end, gene, gene_loc in X:
+				ofh.write('%s\t%s\t%s\t%s\t%i\t%i\t%.4f\t%s\n' % (epitope, core, gene, a, start, end, affinity, gene_loc))
+		ofh.close()
+			
+	sys.stdout.write('Done.\n\n')
+	
+	
 if __name__ == '__main__': main()
