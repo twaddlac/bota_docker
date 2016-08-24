@@ -191,6 +191,6 @@ Below is an example to walk you through what a real BOTA analysis should look li
 Citation
 =====================
 
-**Graham DB<sup>\+</sup>**, **Luo C<sup>\+</sup>**, Abelin JG, Matar CG, Conway KL, Lefkovith A, Jasso GJ, Causer K, Mani DR, Carr SA, and Xavier RJ, Antigen discovery
+**Graham DB\***, **Luo C\***, Abelin JG, Matar CG, Conway KL, Lefkovith A, Jasso GJ, Causer K, Mani DR, Carr SA, and Xavier RJ, Antigen discovery
 by MHCII peptidomics reveals biochemical features of immunodominance. [In Review]
 
