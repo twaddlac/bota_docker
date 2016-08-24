@@ -76,11 +76,12 @@ The basic BOTA analysis runs as below:
     
 Below is a detailed usage of BOTA.py:
 
-  Usage: BOTA.py -c/--config <config_file> -o/--outdir <output directory> [options]
+    Usage: BOTA.py -c/--config <config_file> -o/--outdir <output directory> [options]
 
-  BOTA: Bacteria-Origin T-cell Antigen predictor
+    BOTA: Bacteria-Origin T-cell Antigen predictor
 
-  The configuration file format follows:
+
+The configuration file format follows:
 
     # this a comment line
     hmmscan='hmmscan' # if alread in the PATH, then just leave it as 'hmmscan', if not, specify the path
@@ -97,40 +98,30 @@ Below is a detailed usage of BOTA.py:
 	gram # Optional. specify the organism is 'P', gram-positive, 'N', gram-negative, or 'A', achaea; if not specified, BOTA
 			will try to determine it.
 
-  Add --help to see a full list of required and optional
-  arguments to run BOTA
+Add --help to see a full list of required and optional arguments to run BOTA
 
-  Additional information can also be found at:
-  https://bitbucket.org/luo-chengwei/bota/wiki
-
-  If you use BOTA in your work, please cite it as:
-  <BOTA citation TBD>
-
-  Copyright: Chengwei Luo, Broad Institute of MIT and Harvard, 2015
-
+Additional information can also be found at:
+ 
+    https://bitbucket.org/luo-chengwei/bota/wiki
 
 Options:
  
    --version             show program's version number and exit
+
     -h, --help            show this help message and exit
 
 Required options:
 
     These options are required to run BOTA, and may be supplied in any order.
 
-    -c FILE, --config=FILE
-                        The configuration file to define a project.
-    -o DIR, --outdir=DIR
-                        The output directory of BOTA. If it doesn't exist,
-                        BOTA will create it.
+    -c FILE, --config=FILE   The configuration file to define a project.
+    -o DIR, --outdir=DIR  The output directory of BOTA. If it doesn't exist, BOTA will create it.
 
 Optional parameters:
 
     These options are optional, and may be supplied in any order.
 
-    -t INT, --nproc=INT
-                        Number of processor for BOTA to use [default: 1; set 0
-                        if you want to use all CPUs available].
+    -t INT, --nproc=INT    Number of processor for BOTA to use [default: 1; set 0 if you want to use all CPUs available].
   
 Below is a list of HLA alleles that BOTA will support:
 
@@ -196,4 +187,10 @@ Tutorial
 Below is an example to walk you through what a real BOTA analysis should look like.
 
 [TBD]
+
+Citation
+=====================
+
+Graham DB\+, Luo C\+, Abelin JG, Matar CG, Conway KL, Lefkovith A, Jasso GJ, Causer K, Mani DR, Carr SA, and Xavier RJ, Antigen discovery
+by MHCII peptidomics reveals biochemical features of immunodominance. [In Review]
 
