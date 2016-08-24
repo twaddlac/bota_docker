@@ -21,6 +21,23 @@ You can also download the zip archive of it from bitbucket repository:
 
 https://bitbucket.org/luo-chengwei/BOTA
 
+After this step, you will need to download the latest Pfam-A database, just follow below url:
+
+ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release
+
+and download "Pfam-A.hmm.gz".
+
+You will then gunzip it:
+
+    gunzip Pfam-A.hmm.gz
+
+Then one last thing, you will need to prepare it by running hmmpress:
+
+    hmmpress Pfam-A.hmm
+    
+With the right dependencies installed and you are ready to go!
+
+
 Dependencies
 ============
 
@@ -30,15 +47,25 @@ Dependencies
 
 >BioPython
 
+>NetworkX
+
 + Third party pipelines: 
 
 >standalone psortb v3.0+ (http://www.psort.org/)
 
 >standalone HMMTOP (http://www.enzim.hu/hmmtop)
 
->standalone NetMHCII 2.0+ (http://www.cbs.dtu.dk/services/NetMHCII)
+>standalone HMMER v3.1b2 (http://www.hmmer.org)
 
 You don't have to install the package, just call BOTA.py from wherever you put the whole folder. 
+
+
+Input
+===========
+
+The required input files are the .fa file of the genome and the .gff file (GFF3 format) of the annotations.
+
+You can run multiple genomes in one project, you will just need to specify each of them in the config file.
 
 Usage
 ===========
@@ -49,62 +76,63 @@ The basic BOTA analysis runs as below:
     
 Below is a detailed usage of BOTA.py:
 
-  Options:
+  Usage: BOTA.py -c/--config <config_file> -o/--outdir <output directory> [options]
 
-    --version             show program's version number and exit
+  BOTA: Bacteria-Origin T-cell Antigen predictor
 
+  The configuration file format follows:
+
+    # this a comment line
+    hmmscan='hmmscan' # if alread in the PATH, then just leave it as 'hmmscan', if not, specify the path
+    hmmtop='hmmtop' # the same as hmmscan
+    psort='psort'	# the same as hmmscan
+    [genome_name] # you need the squared bracket to contain whatever you want to call the genome
+    fna	/path/to/genomics/fna/file  # this is a compulsory field
+    gff	/path/to/gff/file  # optional. if not supplied, we will do prodigal protein-coding gene predictions
+    hmmtop /path/to/hmmtop/file # optional. if not supplied, we will do hmmtop calculation.
+    hmmscan /path/to/text-hmmscan/file # optional
+    psort /path/to/psort/file # optional
+    alleles list_of_alleles_separated_by_comma # Optional. you can also supply human or mouse to select all available alleles
+              # if you don't specify, default to all alleles.
+	gram # Optional. specify the organism is 'P', gram-positive, 'N', gram-negative, or 'A', achaea; if not specified, BOTA
+			will try to determine it.
+
+  Add --help to see a full list of required and optional
+  arguments to run BOTA
+
+  Additional information can also be found at:
+  https://bitbucket.org/luo-chengwei/bota/wiki
+
+  If you use BOTA in your work, please cite it as:
+  <BOTA citation TBD>
+
+  Copyright: Chengwei Luo, Broad Institute of MIT and Harvard, 2015
+
+
+Options:
+ 
+   --version             show program's version number and exit
     -h, --help            show this help message and exit
 
-  
 Required options:
 
-  These options are required to run BOTA, and may be supplied in any order.
+    These options are required to run BOTA, and may be supplied in any order.
 
-    -i FILE, --infile=FILE
-                        Input microbial genome file(s) in fasta format (if
-                        multiple, separate by coma).
+    -c FILE, --config=FILE
+                        The configuration file to define a project.
     -o DIR, --outdir=DIR
                         The output directory of BOTA. If it doesn't exist,
                         BOTA will create it.
 
-  
 Optional parameters:
 
-These options are optional, and may be supplied in any order.
+    These options are optional, and may be supplied in any order.
 
-    -t INT, --num_proc=INT
+    -t INT, --nproc=INT
                         Number of processor for BOTA to use [default: 1; set 0
                         if you want to use all CPUs available].
-    -m STRING, --mode=STRING
-                        Mode of running BOTA, either "single" or "meta"
-                        (default: single).
-    --loci=STRING       Loci selection, either "human" or "mouse" (default:
-                        human).
-    --allele=STRING     Specify the allele you are interested in; if multiple,
-                        separate them using coma.
-                        For a full list of allele, type "python BOTA.py
-                        --list_allele".
-    --list_allele       Print full list of allele and leave.
-    
-    --min_pep_length=INT
-                        The minimum length of epitode to consider (default:
-                        12).
-    --prodigal=DIR      The directory to prodigal binary, specify if not in
-                        ENV (http://prodigal.ornl.gov/).
-    --blat=DIR          The directory to blat binary, specify if not in ENV
-                        (https://genome.ucsc.edu/FAQ/FAQblat.html).
-    --psort=DIR         The directory to PSort, specify if not in ENV
-                        (http://www.psort.org/).
-    --hmmtop=DIR        The directory to HMMTOP, specify if not in ENV
-                        (http://www.enzim.hu/hmmtop/).
-    --netMHCII=STRING   The directory to netMHCII binary, specify if not in
-                        ENV http://www.cbs.dtu.dk/services/NetMHCII).
-                        
-By running:
-
-    python BOTA.py --list_allele
-    
-script will print out all possible alleles to select from as below:
+  
+Below is a list of HLA alleles that BOTA will support:
 
     HLA-DRB10101
     HLA-DRB10301
@@ -138,11 +166,8 @@ script will print out all possible alleles to select from as below:
     
 For instance, if you have a genome that is the EGD-e strain of Listeria monocytogenes in fastA format: "L.monocytogenes_EGD-e.fa", and you want to find out the epitodes that could be presented by mouse "H-2-IAb", you could run:
 
-    python pipeline/BOTA.py -i test/L.monocytogenes_EGD-e.fa -o test/Listeria.BOTA/ -t 2 --allele H-2-IAb
+    BOTA.py -c Listeria_monocytogenes_EGD-e/config -o Listeria_monocytogenes_EGD-e/BOTA/ -t 2
     
-Alternatively, if you are interested in all alleles from mouse MHC-II then you could run:
-
-    python pipeline/BOTA.py -i test/L.monocytogenes_EGD-e.fa -o test/Listeria.BOTA/ -t 2 --loci mouse
 
 The output of the eiptopes predicted would be in the file: test/Listeria.BOTA/L.monocytogenes_EGD-e.epitopes.out
 
@@ -151,13 +176,17 @@ Interpret output
 
 The output from the previous example looks like this:
 
-    #epitope	core	gene	allele	start	end	affinity	cell_location
-    AGAYSGAHLNPAVTI	YSGAHLNPA	ENA|AL591824|AL591824.1_1170|1194120-1194824|1	H-2-IAb	55	70	70.1000	CytoplasmicMembrane
-    KVTFAGTVVQPIVEA	FAGTVVQPI	ENA|AL591824|AL591824.1_258|282755-284227|1	H-2-IAb	265	280	84.1000	Cellwall
-    DVHYTWSIPNSTNVK	YTWSIPNST	ENA|AL591824|AL591824.1_156|157089-159470|1	H-2-IAb	65	80	22.3250	Cellwall
-    DRVFTAGAPISSTNF	FTAGAPISS	ENA|AL591824|AL591824.1_156|157089-159470|1	H-2-IAb	243	258	49.1500	Cellwall
-    TYFFTSPYARAVAVA	FTSPYARAV	ENA|AL591824|AL591824.1_2810|2879906-2880205|-1	H-2-IAb	40	55	21.1500	CytoplasmicMembrane
-    MKPYNPTTALVVAED	YNPTTALVV	ENA|AL591824|AL591824.1_1671|1717193-1722328|-1	H-2-IAb	751	766	114.9250	Cellwall
+    #peptide	gene_name	chr_acc	gene_start	gene_stop	strand	pep_start	pep_stop	score
+    FSSATLNSA	TA05_25490	JXUN01000256.1	6793	9210	-	1111	1140	0.695987
+    ELGALSLSA	TA05_25490	JXUN01000256.1	6793	9210	-	1195	1224	0.758599
+    WPAGGLASA	TA05_19735	JXUN01000201.1	15072	17129	+	1399	1428	0.697193
+    ISLALAAPSYAAEA	TA05_13960	JXUN01000151.1	17693	19804	+	43	87	0.758729
+    FSVAAAMES	TA05_09645	JXUN01000116.1	12753	14144	-	889	918	0.826708
+    FSVAYASQA	TA05_03005	JXUN01000059.1	24619	25944	-	412	441	0.957796
+    AQGVVTAPAQNSTVAVA	nlpD	JXUN01000196.1	6459	7586	-	544	597	0.918355
+    VTAPVTAPAVSTT	nlpD	JXUN01000196.1	6459	7586	-	682	723	0.961591
+    ASKPTITYS	nlpD	JXUN01000196.1	6459	7586	-	592	621	0.646375
+    TTEPTASST	nlpD	JXUN01000196.1	6459	7586	-	715	744	0.860312
     ......
     
 
