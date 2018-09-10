@@ -41,6 +41,8 @@ With the right dependencies installed and you are ready to go!
 Dependencies
 ============
 
+BOTA: Bacteria Originated T-Cell Antigen Predictor, is distributed, in part, under and subject to the provisions of licenses for its dependencies: 
+
 * Python-2.7 or above
 
 + Python libraries:
@@ -58,6 +60,8 @@ Dependencies
 >standalone HMMER v3.1b2 (http://www.hmmer.org)
 
 You don't have to install the package, just call BOTA.py from wherever you put the whole folder. 
+
+All rights reserved.
 
 
 Input
