@@ -67,7 +67,8 @@ Copyright: Chengwei Luo, Broad Institute of MIT and Harvard, 2015
 """
 
 
-import sys, os, re, glob, shutil, cPickle, random
+import sys, os, re, glob, shutil, random
+import _pickle as cPickle
 from optparse import OptionParser, OptionGroup
 from operator import itemgetter
 from time import ctime, time
@@ -222,7 +223,7 @@ class ProjInfo:
 		
 		# get all alleles
 		all_alleles = {'human':[], 'mouse':[]}
-		for line in open(self.HLA_db, 'rb'):
+		for line in open(self.HLA_db, 'r'):
 			cols = line[:-1].split(',')
 			if line[:3] == 'HLA': all_alleles['human'] += cols
 			else: all_alleles['mouse'] += cols
@@ -230,7 +231,7 @@ class ProjInfo:
 			
 		genome_id = ''
 		missing_execs = []
-		for line in open(config, 'rb'):
+		for line in open(config, 'r'):
 			if line[0] == '#': continue # the comment line
 			if re.search('blat|hmmscan|prodigal|hmmtop|psort|gram|alleles\=\'.+\'', line[:-1]) != None:
 				try:
@@ -400,7 +401,7 @@ def extract_gff_features(genome_proj, faa_file):
 	
 	gene_dict = {}
 	cds_set = []
-	for line in open(gff, 'rb'):
+	for line in open(gff, 'r'):
 		if line[0]=='#': continue
 		cols = line[:-1].split('\t')
 		if cols[2] == 'CDS':
@@ -477,7 +478,7 @@ def call_Gram(args):
 	
 	thrs = {'k': 30, 'p': 40, 'c':50, 'o': 60}
 	best_matches = {}
-	for line in open(blat_file, 'rb'):
+	for line in open(blat_file, 'r'):
 		cols = line.split('\t')
 		gene, hit, identity, evalue, score = cols[0], cols[1], float(cols[2]), float(cols[-2]), float(cols[-1])
 		if evalue > 1e-6: continue
@@ -549,7 +550,7 @@ def run_psort(args):
 		
 	xfh = open(outfile, 'wb')
 	for sub_outfile in glob.glob(subdir+'/*.psort'):
-		for line_ind, line in enumerate(open(sub_outfile, 'rb')):
+		for line_ind, line in enumerate(open(sub_outfile, 'r')):
 			if line_ind == 0: continue
 			xfh.write(line)
 	xfh.close()
@@ -593,14 +594,14 @@ def run_hmmtop(args):
 	
 	xfh = open(outfile, 'wb')
 	for sub_outfile in glob.glob(subdir+'/*.hmmtop'):
-		for line_ind, line in enumerate(open(sub_outfile, 'rb')): xfh.write(line)
+		for line_ind, line in enumerate(open(sub_outfile, 'r')): xfh.write(line)
 	xfh.close()
 	shutil.rmtree(subdir)
 	return 0
 	
 def convert_hmmtop_output(infile):
 	models = {}
-	for line in open(infile, 'rb'):
+	for line in open(infile, 'r'):
 		if line[0] == '>':
 			gene, orientation, n_st = line[:-1].split()[2:5]
 			models[gene] = {'seq': '', 'pred': ''}
@@ -689,21 +690,21 @@ def integrate_data(genomeID, genome_dir, genome_pkl):
 		pred_struct = models[geneID]['pred']
 		gene_info_dict[geneID].hmmtop = pred_struct
 	# load loc
-	for line in open(psort_file, 'rb'):
+	for line in open(psort_file, 'r'):
 		cols = line.rstrip().split('\t')
 		geneID = cols[0].rstrip(' ')
 		loc = cols[1]
 		gene_info_dict[geneID].cellular_loc = loc
 	# load domains
-	for line in open(hmmscan_file, 'rb'):
+	for line in open(hmmscan_file, 'r'):
 		if line[0] == '#': continue
 		cols = [x for x in line.rstrip().split(' ') if x != '']
 		try:geneID = cols[3]
-		except: print cols
+		except: print(cols)
 		start, end = int(cols[19]), int(cols[20])
 		gene_info_dict[geneID].domains.append([start, end])
 	# load PW scores
-	seq_scores = cPickle.load(open(pwm_file, 'rb'))
+	seq_scores = cPickle.load(open(pwm_file, 'r'))
 	for geneID in seq_scores:
 		gene_info_dict[geneID].PW_score = seq_scores[geneID]
 	
@@ -806,7 +807,7 @@ def main(argv = sys.argv[1:]):
 				genome_proj.gram = call_Gram([blat, db, faa_file, genome_dir, genomeID])
 			with open(gram_file, 'wb') as gfh: gfh.write('%s\n' % genome_proj.gram)
 		else:
-			with open(gram_file, 'rb') as gfh: genome_proj.gram=gfh.readline().rstrip('\n')
+			with open(gram_file, 'r') as gfh: genome_proj.gram=gfh.readline().rstrip('\n')
 		
 		
 		# hmmscan for domains
@@ -842,13 +843,13 @@ def main(argv = sys.argv[1:]):
 			loc_dict = {}
 			# load the location information
 			psort_out = os.path.join(genome_dir, '%s.psort' % genomeID)
-			for line in open(psort_out, 'rb'):
+			for line in open(psort_out, 'r'):
 				cols = line.rstrip().split('\t')
 				geneID = cols[0].rstrip(' ')
 				loc = cols[1]
 				loc_dict[geneID] = loc
 				
-			aa_list, pwmatrix = cPickle.load(open(project_info.pwm_db, 'rb'))
+			aa_list, pwmatrix = cPickle.load(open(project_info.pwm_db, 'r'))
 			pw_dict = {}
 			for aa_ind, aa in enumerate(aa_list):
 				for pos_ind in range(9):
@@ -882,7 +883,7 @@ def main(argv = sys.argv[1:]):
 	
 	for genomeID in project_info.genomes:
 		genome_pkl = os.path.join(options.outdir, '%s.pkl' % genomeID)
-		genome_data = cPickle.load(open(genome_pkl, 'rb'))
+		genome_data = cPickle.load(open(genome_pkl, 'r'))
 		
 		candidates = []
 		for geneID in genome_data:

@@ -1,11 +1,11 @@
 #this a config page for Citrobacter_rodentium_ATCC_51459
-blat='blat'
-hmmscan='hmmscan'
-hmmtop='hmmtop'
-psort='psort'
+blat='/usr/local/src/blat'
+hmmscan='/usr/bin/hmmscan'
+hmmtop='/usr/local/src/hmmtop_2.1/hmmtop'
+psort='/usr/local/psortb/bin/psort'
 prodigal='prodigal'
-[Citrobacter_rodentium_ATCC_51459]
-fna	data/Citrobacter_rodentium_ATCC_51459/GCA_000835925.1_ASM83592v1_genomic.fna
-gff	data/Citrobacter_rodentium_ATCC_51459/GCA_000835925.1_ASM83592v1_genomic.gff
-alleles	H-2-IAb
+['da_clap']
+fna	sequence.fasta
+gff	sequence.gff3
+alleles	H-2-IAd
 
