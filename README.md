@@ -9,6 +9,17 @@ BOTA inspects all possible peptides in a genomic or metagenomic sequence and pre
 
 Install
 ===========
+
+Docker
+===========
+To build image, clone repo and run:
+
+    docker build -t bota .
+
+To run docker container:
+
+    docker run -v `pwd`:/usr/local/src --rm -it bota /bin/bash
+
 use git:
 
     git clone https://bitbucket.org/luo-chengwei/BOTA
