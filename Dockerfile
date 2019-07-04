@@ -12,7 +12,8 @@ RUN pip3 install --upgrade \
     'networkx==2.2' \
     'conda' \
     'Keras' \
-    'tensorflow'
+    'tensorflow' \
+    'ptvsd'
 
 # RUN wget http://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz && \
     # gunzip Pfam-A.hmm.gz

@@ -1,11 +1,11 @@
 #this a config page for Citrobacter_rodentium_ATCC_51459
-blat='/usr/local/src/algorithms/blat'
+blat='/usr/local/src/alogrithms/blat'
 hmmscan='/usr/bin/hmmscan'
-hmmtop='/usr/local/src/algorithms/hmmtop_2.1/hmmtop'
+hmmtop='/usr/local/src/alogrithms/hmmtop_2.1/hmmtop'
 psort='/usr/local/psortb/bin/psort'
 prodigal='prodigal'
-['da_clap']
+[da_clap]
 fna	/usr/local/src/db/sequence.fasta
 gff	/usr/local/src/db/sequence.gff3
-alleles	H-2-IAd
+alleles	H-2-IAb
 

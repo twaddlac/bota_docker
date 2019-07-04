@@ -1,0 +1,17 @@
+################ Project Configurations ##############
+[3rd party programs]
+  prodigal: /usr/bin/prodigal
+  hmmscan: /usr/bin/hmmscan
+  hmmtop: /usr/local/src/alogrithms/hmmtop_2.1/hmmtop
+  psort: /usr/local/psortb/bin/psort
+  
+[da_clap]
+  fna=/usr/local/src/db/sequence.fasta
+  gff=/usr/local/src/db/sequence.gff3
+  hmmtop=None
+  hmmscan=None
+  psort=None
+	Gram=None
+  [Alleles]
+    H-2-IAb
+

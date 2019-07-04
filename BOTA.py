@@ -81,6 +81,8 @@ import numpy as np
 from Bio import SeqIO
 from Bio.Seq import Seq
 
+import ptvsd
+
 # KERAS init
 from keras.models import Sequential, model_from_json
 #from keras.layers.core import Dense, Dropout, Activation
@@ -239,7 +241,10 @@ class ProjInfo:
 				except:
 					sys.stderr.write('[FATAL] Error in parsing the config file genome file section.\n')
 					exit(1)
+
+				# print("v",v)
 				av = which(v)
+
 				if av != None:
 					if k == 'blat': self.blat = av
 					elif k == 'psort': self.psort = av
@@ -361,12 +366,17 @@ def which(program):
 	abspath: the absolute path of the program if it is executable and the system can
 				locate it; otherwise None.
 	"""
+	# print("program",program)
 	def is_exe(fpath):
 		return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 	fpath, fname = os.path.split(program)
+	# print("fpath",fpath)
+	# print("fname",fname)
 	if fpath:
+		# print('here')
 		if is_exe(program):
+			# print("is_exec", os.path.abspath(program))
 			return os.path.abspath(program)
 	else:
 		for path in os.environ["PATH"].split(os.pathsep):
@@ -413,7 +423,7 @@ def extract_gff_features(genome_proj, faa_file):
 				nt=Seq(seqs[cols[0]][s-1:e])
 				if cols[6] == '-': aa = nt.reverse_complement().translate(stop_symbol='')
 				else: aa=nt.translate(stop_symbol='')
-			except: contine
+			except: continue
 			cds_set.append([parent_gene, tag, aa])
 		elif cols[2] == 'gene':
 			try: gene_name = re.search('Name\=([^;]+)\;', cols[-1]).group(1)
@@ -422,7 +432,7 @@ def extract_gff_features(genome_proj, faa_file):
 			except: continue
 			gene_dict[geneID] = gene_name
 	
-	faa = open(faa_file, 'wb')
+	faa = open(faa_file, 'w')
 	for parent_gene, tag, aa in cds_set:
 		try: gene_name = gene_dict[parent_gene]
 		except: continue
@@ -514,7 +524,7 @@ def run_indi_psort(args):
 		cmd = [psort, '-a', '-o', 'terse', infile]
 	else:
 		cmd = [psort, '-n', '-o', 'terse', infile]
-	with open(outfile, 'wb') as ofh:
+	with open(outfile, 'w') as ofh:
 		p1=Popen(cmd, stdout=ofh, stderr=PIPE)
 		p1.communicate()
 	return 0
@@ -531,7 +541,7 @@ def run_psort(args):
 	for i, record in enumerate(SeqIO.parse(faa_file, 'fasta')):
 		if i % 10 == 0:
 			if ofh != None: ofh.close()
-			ofh = open(subdir+'/%i.faa' % (1+i/10), 'wb')
+			ofh = open(subdir+'/%i.faa' % (1+i/10), 'w')
 		ofh.write('>%s\n%s\n' % (record.name, record.seq))
 	ofh.close()
 	
@@ -548,7 +558,7 @@ def run_psort(args):
 	
 	#for cmd in cmds: print cmd; run_indi_psort(cmd)
 		
-	xfh = open(outfile, 'wb')
+	xfh = open(outfile, 'w')
 	for sub_outfile in glob.glob(subdir+'/*.psort'):
 		for line_ind, line in enumerate(open(sub_outfile, 'r')):
 			if line_ind == 0: continue
@@ -576,7 +586,7 @@ def run_hmmtop(args):
 	for i, record in enumerate(SeqIO.parse(faa_file, 'fasta')):
 		if i % 10 == 0:
 			if ofh != None: ofh.close()
-			ofh = open(subdir+'/%i.faa' % (1+i/10), 'wb')
+			ofh = open(subdir+'/%i.faa' % (1+i/10), 'w')
 		ofh.write('>%s\n%s\n' % (record.name, record.seq))
 	ofh.close()
 	
@@ -592,7 +602,7 @@ def run_hmmtop(args):
 	
 	#for cmd in cmds: run_indi_hmmtop(cmd)
 	
-	xfh = open(outfile, 'wb')
+	xfh = open(outfile, 'w')
 	for sub_outfile in glob.glob(subdir+'/*.hmmtop'):
 		for line_ind, line in enumerate(open(sub_outfile, 'r')): xfh.write(line)
 	xfh.close()
@@ -666,7 +676,7 @@ def run_pwmscore(args):
 					score.append(pw_dict[(aa, pos_ind)])
 			score_x = pw_scoring(pw_dict, score, peptide)
 			seq_scores[rec.name].append(score_x)
-	cPickle.dump(seq_scores, open(pwm_file, 'wb'))
+	cPickle.dump(seq_scores, open(pwm_file, 'w'))
 	return 0
 	 
 
@@ -708,7 +718,7 @@ def integrate_data(genomeID, genome_dir, genome_pkl):
 	for geneID in seq_scores:
 		gene_info_dict[geneID].PW_score = seq_scores[geneID]
 	
-	cPickle.dump(gene_info_dict, open(genome_pkl, 'wb'))
+	cPickle.dump(gene_info_dict, open(genome_pkl, 'w'))
 	return 0
 		
 def transform_seq(seq, aa_dict):
@@ -765,7 +775,7 @@ def main(argv = sys.argv[1:]):
 			exit()
 	
 	logfile = os.path.join(options.outdir, 'project.log')
-	logfh = open(logfile, 'wb')	
+	logfh = open(logfile, 'w')	
 	project_info = parse_config(options.config)
 	project_info.print_projInfo()
 	project_info.print_projInfo(stream=logfh)
@@ -805,7 +815,7 @@ def main(argv = sys.argv[1:]):
 				blat = project_info.blat
 				db = project_info.gram_db
 				genome_proj.gram = call_Gram([blat, db, faa_file, genome_dir, genomeID])
-			with open(gram_file, 'wb') as gfh: gfh.write('%s\n' % genome_proj.gram)
+			with open(gram_file, 'w') as gfh: gfh.write('%s\n' % genome_proj.gram)
 		else:
 			with open(gram_file, 'r') as gfh: genome_proj.gram=gfh.readline().rstrip('\n')
 		
@@ -931,7 +941,7 @@ def main(argv = sys.argv[1:]):
 					R.append([allele, pep.gene, chr, s_coord, e_coord, seq, z]) 
 				
 		peptide_output = os.path.join(options.outdir, '%s.peptides.txt' % genomeID)
-		pfh = open(peptide_output, 'wb')
+		pfh = open(peptide_output, 'w')
 		pfh.write('#peptide\tgene_name\tchr_acc\tgene_start\tgene_stop\tstrand\tpep_start\tpep_stop\tscore\n')
 		for allele, gene, chr, s, e, seq, score in R:
 			gene_start, gene_stop, strand, geneID = re.search('(\d+)\-(\d+)\|(.{1})\|gene\=(.+)$', gene).group(1,2,3,4)
