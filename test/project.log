@@ -6,7 +6,7 @@
   psort: /usr/local/psortb/bin/psort
   
 [da_clap]
-  fna=/usr/local/src/db/sequence.fasta
+  fna=/usr/local/src/db/sequence.fna
   gff=/usr/local/src/db/sequence.gff3
   hmmtop=None
   hmmscan=None

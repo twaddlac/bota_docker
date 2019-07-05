@@ -11,9 +11,10 @@ RUN pip3 install --upgrade \
     'biopython' \
     'networkx==2.2' \
     'conda' \
-    'Keras' \
-    'tensorflow' \
-    'ptvsd'
+    'Keras==0.3.3' \
+    'tensorflow==1.1.0' \
+    'ptvsd' \
+    'h5py'
 
 # RUN wget http://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz && \
     # gunzip Pfam-A.hmm.gz

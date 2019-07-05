@@ -5,7 +5,7 @@ hmmtop='/usr/local/src/alogrithms/hmmtop_2.1/hmmtop'
 psort='/usr/local/psortb/bin/psort'
 prodigal='prodigal'
 [da_clap]
-fna	/usr/local/src/db/sequence.fasta
+fna	/usr/local/src/db/sequence.fna
 gff	/usr/local/src/db/sequence.gff3
 alleles	H-2-IAb
 

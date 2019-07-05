@@ -84,7 +84,7 @@ from Bio.Seq import Seq
 import ptvsd
 
 # KERAS init
-from keras.models import Sequential, model_from_json
+from keras.models import Sequential, model_from_json, model_from_config
 #from keras.layers.core import Dense, Dropout, Activation
 #from keras.optimizers import SGD, Adam, RMSprop
 #from keras.utils import np_utils
@@ -366,17 +366,14 @@ def which(program):
 	abspath: the absolute path of the program if it is executable and the system can
 				locate it; otherwise None.
 	"""
-	# print("program",program)
+	
 	def is_exe(fpath):
 		return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 	fpath, fname = os.path.split(program)
-	# print("fpath",fpath)
-	# print("fname",fname)
+	
 	if fpath:
-		# print('here')
 		if is_exe(program):
-			# print("is_exec", os.path.abspath(program))
 			return os.path.abspath(program)
 	else:
 		for path in os.environ["PATH"].split(os.pathsep):
@@ -519,11 +516,11 @@ def call_Gram(args):
 def run_indi_psort(args):
 	psort, infile, outfile, gram = args
 	if gram == 'P':
-		cmd = [psort, '-p', '-o', 'terse', infile]
+		cmd = [psort, '-p', '-o', 'terse', '--seq', infile]
 	elif gram == 'A':
-		cmd = [psort, '-a', '-o', 'terse', infile]
+		cmd = [psort, '-a', '-o', 'terse', '--seq', infile]
 	else:
-		cmd = [psort, '-n', '-o', 'terse', infile]
+		cmd = [psort, '-n', '-o', 'terse', '--seq', infile]
 	with open(outfile, 'w') as ofh:
 		p1=Popen(cmd, stdout=ofh, stderr=PIPE)
 		p1.communicate()
@@ -676,7 +673,7 @@ def run_pwmscore(args):
 					score.append(pw_dict[(aa, pos_ind)])
 			score_x = pw_scoring(pw_dict, score, peptide)
 			seq_scores[rec.name].append(score_x)
-	cPickle.dump(seq_scores, open(pwm_file, 'w'))
+	cPickle.dump(seq_scores, open(pwm_file, 'wb'))
 	return 0
 	 
 
@@ -685,6 +682,7 @@ def integrate_data(genomeID, genome_dir, genome_pkl):
 	hmmtop_file = os.path.join(genome_dir, '%s.hmmtop' % genomeID)
 	hmmscan_file = os.path.join(genome_dir, '%s.hmmscan' % genomeID)
 	pwm_file = os.path.join(genome_dir, '%s.pwm' % genomeID)
+	# TODO: Make this accept any file extension.
 	faa_file = os.path.join(genome_dir, '%s.faa' % genomeID)
 	# make data
 	gene_info_dict = {}
@@ -706,7 +704,7 @@ def integrate_data(genomeID, genome_dir, genome_pkl):
 		loc = cols[1]
 		gene_info_dict[geneID].cellular_loc = loc
 	# load domains
-	for line in open(hmmscan_file, 'r'):
+	for line in open(hmmscan_file, 'r', encoding="latin-1"):
 		if line[0] == '#': continue
 		cols = [x for x in line.rstrip().split(' ') if x != '']
 		try:geneID = cols[3]
@@ -714,11 +712,11 @@ def integrate_data(genomeID, genome_dir, genome_pkl):
 		start, end = int(cols[19]), int(cols[20])
 		gene_info_dict[geneID].domains.append([start, end])
 	# load PW scores
-	seq_scores = cPickle.load(open(pwm_file, 'r'))
+	seq_scores = cPickle.load(open(pwm_file, 'rb'), encoding='latin-1')
 	for geneID in seq_scores:
 		gene_info_dict[geneID].PW_score = seq_scores[geneID]
 	
-	cPickle.dump(gene_info_dict, open(genome_pkl, 'w'))
+	cPickle.dump(gene_info_dict, open(genome_pkl, 'wb'))
 	return 0
 		
 def transform_seq(seq, aa_dict):
@@ -859,7 +857,7 @@ def main(argv = sys.argv[1:]):
 				loc = cols[1]
 				loc_dict[geneID] = loc
 				
-			aa_list, pwmatrix = cPickle.load(open(project_info.pwm_db, 'r'))
+			aa_list, pwmatrix = cPickle.load(open(project_info.pwm_db, 'rb'), encoding='latin-1')
 			pw_dict = {}
 			for aa_ind, aa in enumerate(aa_list):
 				for pos_ind in range(9):
@@ -885,6 +883,7 @@ def main(argv = sys.argv[1:]):
 		for allele in project_info.genomes[genomeID].alleles:
 			model_arch, model_weights = project_info.models[allele]
 			models[allele] = model_from_json(open(model_arch).read())
+			# models[allele] = model_from_config(open(model_arch).read())
 			models[allele].load_weights(model_weights)
 	AAs = 'ARNDCQEGHILKMFPSTWYV'
 	aa_dict = {}
@@ -893,7 +892,7 @@ def main(argv = sys.argv[1:]):
 	
 	for genomeID in project_info.genomes:
 		genome_pkl = os.path.join(options.outdir, '%s.pkl' % genomeID)
-		genome_data = cPickle.load(open(genome_pkl, 'r'))
+		genome_data = cPickle.load(open(genome_pkl, 'rb'), encoding="latin-1")
 		
 		candidates = []
 		for geneID in genome_data:
